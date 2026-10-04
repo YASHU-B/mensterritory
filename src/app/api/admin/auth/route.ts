@@ -108,13 +108,26 @@ export async function POST(req: NextRequest) {
   let isAuthenticated = false;
   let adminName = 'Store Administrator';
 
-  // 1. Check Supabase Auth
-  if (isSupabaseConfigured && supabase) {
+  // 1. Check Server Environment Admin Credentials FIRST (Instant < 1ms response)
+  const envAdminEmail = (process.env.ADMIN_EMAIL || 'admin@mensterritory.com').toLowerCase().trim();
+  const envAdminPassword = process.env.ADMIN_PASSWORD || 'MensTerritory@2026Secure!';
+
+  if (email === envAdminEmail && password === envAdminPassword) {
+    isAuthenticated = true;
+    adminName = 'Yaswanth (Lead Administrator)';
+  }
+
+  // 2. Check Supabase Auth only if not matched, with a 3-second safety timeout
+  if (!isAuthenticated && isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const authPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
+      const timeoutPromise = new Promise<{ data: null; error: any }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error('Auth timeout') }), 3000)
+      );
+      const { data, error } = await Promise.race([authPromise, timeoutPromise]);
 
       if (!error && data?.user) {
         isAuthenticated = true;
@@ -122,17 +135,6 @@ export async function POST(req: NextRequest) {
       }
     } catch (e) {
       console.warn('Supabase auth attempt error:', e);
-    }
-  }
-
-  // 2. Check Server Environment Admin Credentials
-  const envAdminEmail = (process.env.ADMIN_EMAIL || 'admin@mensterritory.com').toLowerCase().trim();
-  const envAdminPassword = process.env.ADMIN_PASSWORD || 'MensTerritory@2026Secure!';
-
-  if (!isAuthenticated) {
-    if (email === envAdminEmail && password === envAdminPassword) {
-      isAuthenticated = true;
-      adminName = 'Yaswanth (Lead Administrator)';
     }
   }
 

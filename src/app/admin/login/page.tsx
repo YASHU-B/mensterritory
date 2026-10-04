@@ -34,7 +34,7 @@ function AdminLoginContent() {
     try {
       const res = await login(email, password);
       if (res.success) {
-        router.push(redirectTarget);
+        window.location.href = redirectTarget;
       } else {
         setErrorMsg(res.error || 'Authentication failed. Please verify credentials.');
         setIsSubmitting(false);

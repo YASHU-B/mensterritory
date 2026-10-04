@@ -59,13 +59,18 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password: pass }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       const data = await res.json();
 
@@ -87,9 +92,15 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
         success: false,
         error: data.error || 'Authentication failed. Please verify credentials.',
       };
-    } catch (err) {
+    } catch (err: any) {
       console.error('Login request error:', err);
       setIsLoading(false);
+      if (err.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Authentication request timed out. Please try again.',
+        };
+      }
       return {
         success: false,
         error: 'Network or server error while connecting to authentication service.',
