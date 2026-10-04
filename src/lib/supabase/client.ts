@@ -1,9 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
+const DEFAULT_SUPABASE_URL = 'https://jzdqflgibyfayfefmaxl.supabase.co';
+
 function sanitizeUrl(val?: string): string {
-  if (!val) return '';
+  if (!val) return DEFAULT_SUPABASE_URL;
   let cleaned = val.trim().replace(/^["']|["']$/g, '').trim();
-  if (!cleaned) return '';
+  if (
+    !cleaned || 
+    cleaned === 'NEXT_PUBLIC_SUPABASE_URL' || 
+    cleaned.includes('your-project-id')
+  ) {
+    return DEFAULT_SUPABASE_URL;
+  }
   if (!cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
     if (cleaned.includes('.supabase.co')) {
       cleaned = `https://${cleaned}`;

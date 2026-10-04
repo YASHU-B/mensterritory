@@ -1,48 +1,36 @@
 import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 export async function GET() {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const rawAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   const rawService = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-  const cleanUrl = rawUrl.trim().replace(/^["']|["']$/g, '');
-  const cleanKey = (rawService || rawAnon).trim().replace(/^["']|["']$/g, '');
+  let dbCategoriesCount = 0;
+  let dbProductsCount = 0;
+  let queryError = null;
 
-  let fetchError = null;
-  let fetchStatus = null;
-  let categoriesCount = 0;
+  if (supabaseAdmin) {
+    try {
+      const [catsRes, prodsRes] = await Promise.all([
+        supabaseAdmin.from('categories').select('id, name'),
+        supabaseAdmin.from('products').select('id, name, slug'),
+      ]);
+      if (catsRes.error) queryError = catsRes.error.message;
+      else dbCategoriesCount = catsRes.data?.length || 0;
 
-  try {
-    const res = await fetch(`${cleanUrl}/rest/v1/categories?select=id,name`, {
-      headers: {
-        apikey: cleanKey,
-        Authorization: `Bearer ${cleanKey}`,
-      },
-      cache: 'no-store',
-    });
-    fetchStatus = res.status;
-    if (res.ok) {
-      const data = await res.json();
-      categoriesCount = Array.isArray(data) ? data.length : 0;
-    } else {
-      fetchError = await res.text();
+      if (prodsRes.error) queryError = prodsRes.error.message;
+      else dbProductsCount = prodsRes.data?.length || 0;
+    } catch (err: any) {
+      queryError = err.message || String(err);
     }
-  } catch (err: any) {
-    fetchError = err.message || String(err);
   }
 
   return NextResponse.json({
-    hasUrl: Boolean(rawUrl),
-    urlLength: rawUrl.length,
-    urlStartsWithHttp: rawUrl.startsWith('http'),
-    urlHasQuotes: rawUrl.startsWith('"') || rawUrl.startsWith("'"),
-    urlPreview: cleanUrl.slice(0, 15) + '...' + cleanUrl.slice(-10),
-    hasAnonKey: Boolean(rawAnon),
-    anonKeyLength: rawAnon.length,
-    hasServiceKey: Boolean(rawService),
-    serviceKeyLength: rawService.length,
-    fetchStatus,
-    categoriesCount,
-    fetchError,
+    status: supabaseAdmin ? 'connected' : 'unconfigured',
+    rawUrlValue: rawUrl,
+    dbCategoriesCount,
+    dbProductsCount,
+    queryError,
   });
 }
