@@ -290,7 +290,22 @@ export interface ProductFilterOptions {
 export async function getProducts(options?: ProductFilterOptions): Promise<Product[]> {
   let products: Product[] = [];
 
-  if (isSupabaseConfigured && supabase) {
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/products');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.products && Array.isArray(json.products) && json.products.length > 0) {
+          products = json.products.map((d: any) => ({
+            ...d,
+            category_name: d.category_name || d.subcategory || '',
+          })) as Product[];
+        }
+      }
+    } catch {}
+  }
+
+  if (products.length === 0 && isSupabaseConfigured && supabase) {
     try {
       let query = supabase.from('products').select('*');
       if (options?.onlyFeatured) query = query.eq('is_featured', true);
@@ -580,6 +595,19 @@ function generateUUID(): string {
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/products');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.products && Array.isArray(json.products)) {
+          const match = json.products.find((p: any) => p.slug === slug || p.id === slug);
+          if (match) return match as Product;
+        }
+      }
+    } catch {}
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase

@@ -31,6 +31,25 @@ export default function AdminProductsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
+      // Auto-sync any local browser products to Supabase cloud
+      if (typeof window !== 'undefined') {
+        const rawLocal = localStorage.getItem('mt_products_v2');
+        if (rawLocal) {
+          try {
+            const parsed = JSON.parse(rawLocal);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              for (const p of parsed) {
+                await fetch('/api/admin/products', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(p),
+                }).catch(() => null);
+              }
+            }
+          } catch {}
+        }
+      }
+
       const [prods, cats] = await Promise.all([
         getAllProductsAdmin(),
         getCategories(),
