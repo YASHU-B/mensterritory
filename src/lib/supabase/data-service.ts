@@ -115,6 +115,21 @@ export async function updateStoreSettings(settings: Partial<StoreSettings>): Pro
 // CATEGORIES
 // -----------------------------------------------------------------------------
 export async function getCategories(): Promise<Category[]> {
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/categories');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.categories && Array.isArray(json.categories) && json.categories.length > 0) {
+          setStored(LS_CATEGORIES, json.categories);
+          return (json.categories as Category[]).sort((a, b) => a.display_order - b.display_order);
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
@@ -151,14 +166,16 @@ export async function saveCategory(category: Partial<Category>): Promise<Categor
   const categories = await getCategories();
   let updatedCategory: Category;
 
+  const targetId = isValidUUID(category.id) ? category.id! : generateUUID();
+
   if (category.id) {
-    const idx = categories.findIndex((c) => c.id === category.id);
+    const idx = categories.findIndex((c) => c.id === category.id || c.id === targetId);
     if (idx >= 0) {
-      updatedCategory = { ...categories[idx], ...category, updated_at: new Date().toISOString() };
+      updatedCategory = { ...categories[idx], ...category, id: targetId, updated_at: new Date().toISOString() };
       categories[idx] = updatedCategory;
     } else {
       updatedCategory = {
-        id: category.id,
+        id: targetId,
         name: category.name || 'New Category',
         slug: category.slug || 'new-category',
         description: category.description || '',
@@ -171,7 +188,7 @@ export async function saveCategory(category: Partial<Category>): Promise<Categor
     }
   } else {
     updatedCategory = {
-      id: 'cat_' + Date.now(),
+      id: targetId,
       name: category.name || 'New Category',
       slug: category.slug || `cat-${Date.now()}`,
       description: category.description || '',
@@ -183,6 +200,28 @@ export async function saveCategory(category: Partial<Category>): Promise<Categor
     categories.push(updatedCategory);
   }
 
+  // 1. Try server API route first (runs with server service_role key, bypasses RLS)
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedCategory),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.category) {
+          const updatedList = categories.map((c) => (c.id === targetId ? json.category : c));
+          setStored(LS_CATEGORIES, updatedList);
+          return json.category as Category;
+        }
+      }
+    } catch (e) {
+      console.warn('API saveCategory error, falling back:', e);
+    }
+  }
+
+  // 2. Direct Supabase client
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
@@ -204,6 +243,16 @@ export async function saveCategory(category: Partial<Category>): Promise<Categor
 }
 
 export async function deleteCategory(id: string): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    try {
+      await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (e) {
+      console.warn('API deleteCategory error:', e);
+    }
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
       await supabase.from('categories').delete().eq('id', id);
@@ -474,13 +523,39 @@ export async function getProducts(options?: ProductFilterOptions): Promise<Produ
 }
 
 export async function getAllProductsAdmin(): Promise<Product[]> {
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/products');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.products && Array.isArray(json.products) && json.products.length > 0) {
+          const mapped = json.products.map((d: any) => ({
+            ...d,
+            category_name: d.category_name || d.subcategory || '',
+          })) as Product[];
+          setStored(LS_PRODUCTS, mapped);
+          return mapped;
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
-      if (!error && data) return data as Product[];
+      if (!error && data && data.length > 0) {
+        const mapped = data.map((d: any) => ({
+          ...d,
+          category_name: d.category_name || d.subcategory || '',
+        })) as Product[];
+        setStored(LS_PRODUCTS, mapped);
+        return mapped;
+      }
     } catch (e) {
       console.warn('Supabase admin products fetch error:', e);
     }
@@ -582,9 +657,38 @@ export async function saveProduct(product: Partial<Product>): Promise<Product> {
     products.push(updatedProduct);
   }
 
+  // 1. Try server API route first (runs with server service_role key, bypasses RLS directly to Postgres)
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProduct),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.product) {
+          const fullProduct = {
+            ...updatedProduct,
+            ...json.product,
+            category_name: updatedProduct.category_name || json.product.subcategory || '',
+          };
+          const updatedList = products.map((p) => (p.id === targetId ? fullProduct : p));
+          setStored(LS_PRODUCTS, updatedList);
+          return fullProduct as Product;
+        }
+      } else {
+        const errJson = await res.json().catch(() => null);
+        console.warn('API /api/admin/products failed, falling back:', errJson);
+      }
+    } catch (e) {
+      console.warn('API /api/admin/products error, falling back:', e);
+    }
+  }
+
+  // 2. Direct Supabase client fallback
   if (isSupabaseConfigured && supabase) {
     try {
-      // Build safe Supabase payload containing ONLY columns that exist in public.products table
       const categoryId = isValidUUID(updatedProduct.category_id) ? updatedProduct.category_id : null;
       const supabasePayload = {
         id: targetId,
@@ -651,6 +755,16 @@ export async function saveProduct(product: Partial<Product>): Promise<Product> {
 }
 
 export async function deleteProduct(id: string): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    try {
+      await fetch(`/api/admin/products?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (e) {
+      console.warn('API deleteProduct error:', e);
+    }
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
       await supabase.from('products').delete().eq('id', id);
