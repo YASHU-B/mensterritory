@@ -520,8 +520,8 @@ export default function CheckoutPage() {
                 <span className="font-mono font-semibold text-zinc-900">₹{cartTotal.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between text-zinc-600">
-                <span>Delivery</span>
-                <span className="text-emerald-600 font-bold">Free</span>
+                <span>Shipping / Delivery</span>
+                <span className="font-medium text-zinc-800">Calculated based on location</span>
               </div>
               <div className="border-t border-zinc-200 pt-3 flex justify-between text-base font-black text-zinc-950">
                 <span>Total Amount</span>

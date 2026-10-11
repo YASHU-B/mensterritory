@@ -14,6 +14,8 @@ import {
   Order,
   OrderItem,
   OrderStatus,
+  PaymentStatus,
+  OrderSource,
 } from '@/types';
 
 // Browser LocalStorage Keys for Clean Catalog Persistence
@@ -91,11 +93,32 @@ export async function updateStoreSettings(settings: Partial<StoreSettings>): Pro
   const current = await getStoreSettings();
   const updated: StoreSettings = { ...current, ...settings, updated_at: new Date().toISOString() };
 
+  // 1. Try server API route first (runs with server service_role key, bypasses RLS)
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.settings) {
+          setStored(LS_SETTINGS, json.settings);
+          return json.settings as StoreSettings;
+        }
+      }
+    } catch (e) {
+      console.warn('API /api/admin/settings error, falling back:', e);
+    }
+  }
+
+  // 2. Direct database client fallback
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('store_settings')
-        .upsert(updated)
+        .upsert(updated, { onConflict: 'id' })
         .select()
         .single();
       if (!error && data) {
@@ -117,7 +140,10 @@ export async function updateStoreSettings(settings: Partial<StoreSettings>): Pro
 export async function getCategories(): Promise<Category[]> {
   if (typeof window !== 'undefined') {
     try {
-      const res = await fetch('/api/admin/categories');
+      const res = await fetch(`/api/admin/categories?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.categories && Array.isArray(json.categories) && json.categories.length > 0) {
@@ -137,10 +163,11 @@ export async function getCategories(): Promise<Category[]> {
         .select('*')
         .order('display_order', { ascending: true });
       if (!error && data && data.length > 0) {
+        setStored(LS_CATEGORIES, data);
         return data as Category[];
       }
-    } catch (e) {
-      console.warn('Supabase categories fetch error:', e);
+    } catch {
+      // fallback
     }
   }
   const cached = getStored<Category[]>(LS_CATEGORIES, INITIAL_CATEGORIES);
@@ -200,6 +227,8 @@ export async function saveCategory(category: Partial<Category>): Promise<Categor
     categories.push(updatedCategory);
   }
 
+  let lastError: string | null = null;
+
   // 1. Try server API route first (runs with server service_role key, bypasses RLS)
   if (typeof window !== 'undefined') {
     try {
@@ -211,34 +240,63 @@ export async function saveCategory(category: Partial<Category>): Promise<Categor
       if (res.ok) {
         const json = await res.json();
         if (json.category) {
-          const updatedList = categories.map((c) => (c.id === targetId ? json.category : c));
+          const finalCat = json.category as Category;
+          const updatedList = categories.some((c) => c.id === targetId)
+            ? categories.map((c) => (c.id === targetId ? finalCat : c))
+            : [...categories, finalCat];
           setStored(LS_CATEGORIES, updatedList);
-          return json.category as Category;
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('mt_categories_updated', { detail: updatedList }));
+          }
+          return finalCat;
         }
+      } else {
+        const errJson = await res.json().catch(() => null);
+        lastError = errJson?.error || `Server responded with ${res.status}`;
       }
-    } catch (e) {
-      console.warn('API saveCategory error, falling back:', e);
+    } catch (e: any) {
+      lastError = e?.message || 'API request failed';
     }
   }
 
-  // 2. Direct Supabase client
+  // 2. Direct database client fallback
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('categories')
-        .upsert(updatedCategory)
+        .upsert(updatedCategory, { onConflict: 'id' })
         .select()
         .single();
       if (!error && data) {
-        setStored(LS_CATEGORIES, categories);
-        return data as Category;
+        const finalCat = data as Category;
+        const updatedList = categories.some((c) => c.id === targetId)
+          ? categories.map((c) => (c.id === targetId ? finalCat : c))
+          : [...categories, finalCat];
+        setStored(LS_CATEGORIES, updatedList);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('mt_categories_updated', { detail: updatedList }));
+        }
+        return finalCat;
       }
-    } catch (e) {
-      console.error('Supabase category save error:', e);
+      if (error) {
+        lastError = error.message;
+      }
+    } catch (e: any) {
+      lastError = e?.message || 'Supabase upsert failed';
     }
   }
 
-  setStored(LS_CATEGORIES, categories);
+  if (lastError) {
+    console.warn('saveCategory failed database persistence:', lastError);
+  }
+
+  const updatedList = categories.some((c) => c.id === targetId)
+    ? categories.map((c) => (c.id === targetId ? updatedCategory : c))
+    : [...categories, updatedCategory];
+  setStored(LS_CATEGORIES, updatedList);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mt_categories_updated', { detail: updatedList }));
+  }
   return updatedCategory;
 }
 
@@ -248,21 +306,25 @@ export async function deleteCategory(id: string): Promise<boolean> {
       await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
-    } catch (e) {
-      console.warn('API deleteCategory error:', e);
+    } catch {
+      // fallback
     }
   }
 
   if (isSupabaseConfigured && supabase) {
     try {
       await supabase.from('categories').delete().eq('id', id);
-    } catch (e) {
-      console.error('Supabase category delete error:', e);
+    } catch {
+      // fallback
     }
   }
+
   const categories = await getCategories();
   const filtered = categories.filter((c) => c.id !== id);
   setStored(LS_CATEGORIES, filtered);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('mt_categories_updated', { detail: filtered }));
+  }
   return true;
 }
 
@@ -312,7 +374,7 @@ export async function getProducts(options?: ProductFilterOptions): Promise<Produ
       if (options?.onlyBestSeller) query = query.eq('is_best_seller', true);
       if (options?.onlyTrending) query = query.eq('is_trending', true);
       if (options?.onlyNewArrival) query = query.eq('is_new_arrival', true);
-      if (options?.onlyOffer) query = query.eq('is_offer', true);
+      if (options?.onlyOffer) query = query.or('is_offer.eq.true,discount_percent.gt.0');
 
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
@@ -502,8 +564,12 @@ export async function getProducts(options?: ProductFilterOptions): Promise<Produ
   if (options?.onlyFeatured) filtered = filtered.filter((p) => p.is_featured);
   if (options?.onlyBestSeller) filtered = filtered.filter((p) => p.is_best_seller);
   if (options?.onlyTrending) filtered = filtered.filter((p) => p.is_trending);
-  if (options?.onlyNewArrival) filtered = filtered.filter((p) => p.is_new_arrival);
-  if (options?.onlyOffer) filtered = filtered.filter((p) => p.is_offer);
+  if (options?.onlyOffer) {
+    const offerMatches = filtered.filter(
+      (p) => p.is_offer || p.discount_percent > 0 || (p.original_price && p.original_price > p.price)
+    );
+    filtered = offerMatches.length > 0 ? offerMatches : filtered;
+  }
 
   // Sorting
   if (options?.sortBy) {
@@ -757,7 +823,7 @@ export async function saveProduct(product: Partial<Product>): Promise<Product> {
 
       const { data, error } = await supabase
         .from('products')
-        .upsert(supabasePayload)
+        .upsert(supabasePayload, { onConflict: 'id' })
         .select()
         .single();
 
@@ -800,6 +866,7 @@ export async function deleteProduct(id: string): Promise<boolean> {
       console.error('Supabase product delete error:', e);
     }
   }
+
   const products = await getAllProductsAdmin();
   const filtered = products.filter((p) => p.id !== id);
   setStored(LS_PRODUCTS, filtered);
@@ -816,7 +883,13 @@ export async function getBanners(): Promise<Banner[]> {
         .from('banners')
         .select('*')
         .order('display_order', { ascending: true });
-      if (!error && data && data.length > 0) return data as Banner[];
+      if (!error && data && data.length > 0) {
+        const mapped = data.map((b: any) => ({
+          ...b,
+          type: b.banner_type || b.type || 'hero',
+        }));
+        return mapped as Banner[];
+      }
     } catch (e) {
       console.warn('Supabase banners fetch error:', e);
     }
@@ -828,14 +901,16 @@ export async function saveBanner(banner: Partial<Banner>): Promise<Banner> {
   const banners = await getBanners();
   let updatedBanner: Banner;
 
+  const targetId = isValidUUID(banner.id) ? banner.id! : generateUUID();
+
   if (banner.id) {
-    const idx = banners.findIndex((b) => b.id === banner.id);
+    const idx = banners.findIndex((b) => b.id === banner.id || b.id === targetId);
     if (idx >= 0) {
-      updatedBanner = { ...banners[idx], ...banner };
+      updatedBanner = { ...banners[idx], ...banner, id: targetId };
       banners[idx] = updatedBanner;
     } else {
       updatedBanner = {
-        id: banner.id,
+        id: targetId,
         title: banner.title || "Men's Territory",
         subtitle: banner.subtitle || '',
         cta_text: banner.cta_text || 'SHOP NOW',
@@ -849,7 +924,7 @@ export async function saveBanner(banner: Partial<Banner>): Promise<Banner> {
     }
   } else {
     updatedBanner = {
-      id: 'banner_' + Date.now(),
+      id: targetId,
       title: banner.title || "Men's Territory",
       subtitle: banner.subtitle || '',
       cta_text: banner.cta_text || 'SHOP NOW',
@@ -862,16 +937,66 @@ export async function saveBanner(banner: Partial<Banner>): Promise<Banner> {
     banners.push(updatedBanner);
   }
 
+  // 1. Try server API route first (runs with server service_role key, bypasses RLS)
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/banners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...updatedBanner,
+          banner_type: updatedBanner.type || 'hero',
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.banner) {
+          const finalBanner = {
+            ...updatedBanner,
+            ...json.banner,
+            type: json.banner.banner_type || json.banner.type || updatedBanner.type,
+          };
+          const updatedList = banners.map((b) => (b.id === targetId ? finalBanner : b));
+          setStored(LS_BANNERS, updatedList);
+          return finalBanner as Banner;
+        }
+      }
+    } catch (e) {
+      console.warn('API /api/admin/banners error, falling back:', e);
+    }
+  }
+
+  // 2. Direct database client fallback
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('banners')
-        .upsert(updatedBanner)
+        .upsert(
+          {
+            id: targetId,
+            title: updatedBanner.title,
+            subtitle: updatedBanner.subtitle,
+            image_url: updatedBanner.image_url,
+            cta_text: updatedBanner.cta_text,
+            cta_link: updatedBanner.cta_link,
+            display_order: updatedBanner.display_order,
+            is_active: updatedBanner.is_active,
+            banner_type: updatedBanner.type || 'hero',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        )
         .select()
         .single();
       if (!error && data) {
-        setStored(LS_BANNERS, banners);
-        return data as Banner;
+        const finalBanner = {
+          ...updatedBanner,
+          ...data,
+          type: data.banner_type || data.type || updatedBanner.type,
+        };
+        const updatedList = banners.map((b) => (b.id === targetId ? finalBanner : b));
+        setStored(LS_BANNERS, updatedList);
+        return finalBanner as Banner;
       }
     } catch (e) {
       console.error('Supabase banner save error:', e);
@@ -899,17 +1024,82 @@ export async function deleteBanner(id: string): Promise<boolean> {
 // -----------------------------------------------------------------------------
 // ORDERS
 // -----------------------------------------------------------------------------
+function mapSupabaseOrder(row: any): Order {
+  const items = Array.isArray(row.order_items || row.items)
+    ? (row.order_items || row.items).map((it: any) => ({
+        id: it.id,
+        order_id: it.order_id,
+        product_id: it.product_id,
+        product_name: it.product_name,
+        sku: it.sku || '',
+        quantity: Number(it.quantity) || 1,
+        size: it.size || 'Free Size',
+        color: it.color || 'Default',
+        unit_price: Number(it.unit_price) || 0,
+        total_price: Number(it.total_price) || 0,
+        image_url: it.product_image || it.image_url || '',
+      }))
+    : [];
+
+  return {
+    id: row.id,
+    order_number: row.order_number,
+    customer_name: row.customer_name,
+    phone: row.customer_phone || row.phone || '',
+    alternative_phone: row.alternative_phone || '',
+    email: row.customer_email || row.email || '',
+    address: row.shipping_address || row.address || '',
+    city: row.city || 'Nagari',
+    district: row.district || '',
+    state: row.state || 'Andhra Pradesh',
+    pincode: row.pincode || '',
+    notes: row.notes || '',
+    subtotal: Number(row.total_amount || row.subtotal || 0),
+    discount: Number(row.discount_amount || row.discount || 0),
+    total: Number(row.total_amount || row.total || 0),
+    status: (row.order_status || row.status || 'Pending') as OrderStatus,
+    payment_status: (row.payment_status || 'pending') as PaymentStatus,
+    order_source: (row.payment_method === 'whatsapp_pay' ? 'WhatsApp' : 'Store') as OrderSource,
+    internal_notes: row.notes || row.internal_notes || '',
+    tracking_number: row.tracking_number || '',
+    courier_name: row.courier_name || '',
+    tracking_link: row.tracking_link || '',
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    items,
+  };
+}
+
 export async function getOrders(): Promise<Order[]> {
+  // 1. Try server API route first
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/orders');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.orders && Array.isArray(json.orders)) {
+          setStored(LS_ORDERS, json.orders);
+          return json.orders as Order[];
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Direct Supabase query
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('orders')
         .select(`
           *,
-          items:order_items(*)
+          order_items (*)
         `)
         .order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) return data as Order[];
+      if (!error && data && data.length > 0) {
+        const mapped = data.map(mapSupabaseOrder);
+        setStored(LS_ORDERS, mapped);
+        return mapped;
+      }
     } catch (e) {
       console.warn('Supabase orders fetch error:', e);
     }
@@ -927,12 +1117,12 @@ export async function getOrderById(id: string): Promise<Order | null> {
         .from('orders')
         .select(`
           *,
-          items:order_items(*)
+          order_items (*)
         `)
         .or(`id.eq.${clean},order_number.ilike.${clean}`)
         .maybeSingle();
 
-      if (!error && data) return data as Order;
+      if (!error && data) return mapSupabaseOrder(data);
     } catch (e) {
       console.warn('Supabase getOrderById error:', e);
     }
@@ -948,26 +1138,38 @@ export async function lookupCustomerOrders(query: string): Promise<Order[]> {
 
   const digits = clean.replace(/[^0-9]/g, '');
 
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch(`/api/orders?q=${encodeURIComponent(clean)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.orders && Array.isArray(json.orders) && json.orders.length > 0) {
+          return json.orders as Order[];
+        }
+      }
+    } catch {}
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
       let builder = supabase
         .from('orders')
         .select(`
           *,
-          items:order_items(*)
+          order_items (*)
         `);
 
       if (clean.startsWith('mt-') || clean.includes('-')) {
         builder = builder.ilike('order_number', `%${clean}%`);
       } else if (digits.length >= 6) {
-        builder = builder.or(`phone.ilike.%${digits}%,alternative_phone.ilike.%${digits}%,order_number.ilike.%${clean}%`);
+        builder = builder.or(`customer_phone.ilike.%${digits}%,order_number.ilike.%${clean}%`);
       } else {
         builder = builder.or(`order_number.ilike.%${clean}%,customer_name.ilike.%${clean}%`);
       }
 
       const { data, error } = await builder.order('created_at', { ascending: false }).limit(20);
       if (!error && data && data.length > 0) {
-        return data as Order[];
+        return data.map(mapSupabaseOrder);
       }
     } catch (e) {
       console.warn('Supabase lookupCustomerOrders error:', e);
@@ -1009,59 +1211,78 @@ export async function createNewOrder(
     })),
   };
 
+  // 1. Try server API route first (guaranteed delivery via service_role into Supabase)
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderInput: { ...orderInput, order_number: orderNumber }, items }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.order) {
+          const localOrders = getStored<Order[]>(LS_ORDERS, INITIAL_ORDERS);
+          setStored(LS_ORDERS, [json.order, ...localOrders.filter((o) => o.id !== json.order.id)]);
+          return json.order as Order;
+        }
+      }
+    } catch (err) {
+      console.warn('API createNewOrder warning, falling back to direct:', err);
+    }
+  }
+
+  // 2. Direct Supabase insert with matched column names
   if (isSupabaseConfigured && supabase) {
     try {
-      // Insert order into Supabase
       const { data: orderData, error: orderErr } = await supabase
         .from('orders')
         .insert({
           order_number: orderNumber,
           customer_name: orderInput.customer_name,
-          phone: orderInput.phone,
-          alternative_phone: orderInput.alternative_phone || '',
-          email: orderInput.email || '',
-          address: orderInput.address,
-          city: orderInput.city,
-          district: orderInput.district,
-          state: orderInput.state,
+          customer_phone: orderInput.phone,
+          customer_email: orderInput.email || '',
+          shipping_address: orderInput.address,
+          city: orderInput.city || 'Nagari',
+          state: orderInput.state || 'Andhra Pradesh',
           pincode: orderInput.pincode,
+          total_amount: Number(orderInput.total || orderInput.subtotal || 0),
+          discount_amount: Number(orderInput.discount || 0),
+          shipping_fee: 0,
+          payment_method: 'whatsapp_pay',
+          payment_status: 'pending',
+          order_status: orderInput.status || 'Pending',
           notes: orderInput.notes || '',
-          subtotal: orderInput.subtotal,
-          discount: orderInput.discount || 0,
-          total: orderInput.total,
-          status: orderInput.status || 'Pending',
-          payment_status: orderInput.payment_status || 'Not Required',
-          order_source: orderInput.order_source || 'WhatsApp',
-          internal_notes: '',
         })
         .select()
         .single();
 
       if (!orderErr && orderData) {
-        // Insert items
         const itemsToInsert = items.map((it) => ({
           order_id: orderData.id,
-          product_id: it.product_id,
+          product_id: isValidUUID(it.product_id) ? it.product_id : null,
           product_name: it.product_name,
-          sku: it.sku,
-          quantity: it.quantity,
-          size: it.size,
-          color: it.color,
-          unit_price: it.unit_price,
-          total_price: it.total_price,
-          image_url: it.image_url || '',
+          size: it.size || 'Free Size',
+          color: it.color || 'Default',
+          quantity: Number(it.quantity) || 1,
+          unit_price: Number(it.unit_price) || 0,
+          total_price: Number(it.total_price) || 0,
+          product_image: it.image_url || '',
         }));
 
         await supabase.from('order_items').insert(itemsToInsert);
 
-        const savedOrder = { ...fullOrder, id: orderData.id, order_number: orderData.order_number };
-        // Sync local storage as well
+        const savedOrder = mapSupabaseOrder({
+          ...orderData,
+          order_items: itemsToInsert,
+        });
+
         const localOrders = getStored<Order[]>(LS_ORDERS, INITIAL_ORDERS);
         setStored(LS_ORDERS, [savedOrder, ...localOrders]);
         return savedOrder;
       }
     } catch (e) {
-      console.error('Supabase order creation error:', e);
+      console.error('Supabase direct order creation error:', e);
     }
   }
 
@@ -1076,17 +1297,22 @@ export async function updateOrderStatus(
   status: OrderStatus,
   internalNotes?: string
 ): Promise<Order | null> {
+  if (typeof window !== 'undefined') {
+    try {
+      await fetch('/api/admin/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orderId, order_status: status }),
+      });
+    } catch {}
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
-      const updatePayload: Record<string, unknown> = {
-        status,
-        updated_at: new Date().toISOString(),
-      };
-      if (internalNotes !== undefined) {
-        updatePayload.internal_notes = internalNotes;
-      }
-
-      await supabase.from('orders').update(updatePayload).eq('id', orderId);
+      await supabase
+        .from('orders')
+        .update({ order_status: status, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
     } catch (e) {
       console.error('Supabase order status update error:', e);
     }

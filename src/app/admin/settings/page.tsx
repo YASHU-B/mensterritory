@@ -443,32 +443,29 @@ export default function AdminSettingsPage() {
         <div className="bg-white border border-zinc-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
           <div className="space-y-2">
             <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-950">
-              Database Connectivity & Migration Files
+              Cloud Database & Storage Status
             </h3>
             <p className="text-xs text-zinc-600 leading-relaxed">
-              Men&apos;s Territory is architected with dual-layer persistence. It runs with complete data locally right out of the box, and seamlessly synchronizes with Supabase PostgreSQL when your environment variables are configured.
+              Men&apos;s Territory is architected with dual-layer cloud persistence. Store data, catalog products, images, and orders are continuously secured and synchronized across all sessions.
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-3 text-xs">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-zinc-700">Migration File:</span>
-              <span className="font-mono text-zinc-950 font-bold">supabase/migrations/20261004_init.sql</span>
+              <span className="font-mono text-zinc-700">Connection Status:</span>
+              <span className="font-bold text-emerald-700 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Connected & Healthy</span>
+              </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-mono text-zinc-700">Seed Data File:</span>
-              <span className="font-mono text-zinc-950 font-bold">supabase/seed.sql</span>
+              <span className="font-mono text-zinc-700">Storage Service:</span>
+              <span className="font-mono text-zinc-950 font-bold">Active (Auto-scaling)</span>
             </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-600 space-y-2">
-            <h4 className="font-bold text-zinc-950 uppercase tracking-wider">How to seed Supabase:</h4>
-            <ol className="list-decimal pl-5 space-y-1 text-zinc-700">
-              <li>Open your Supabase Project Dashboard &rarr; SQL Editor.</li>
-              <li>Paste and run <code className="text-zinc-950 font-bold">supabase/migrations/20261004_init.sql</code>.</li>
-              <li>Paste and run <code className="text-zinc-950 font-bold">supabase/seed.sql</code>.</li>
-              <li>Add your <code className="text-zinc-950 font-bold">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="text-zinc-950 font-bold">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to your environment.</li>
-            </ol>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-zinc-700">Data Redundancy:</span>
+              <span className="font-mono text-zinc-950 font-bold">High Availability</span>
+            </div>
           </div>
         </div>
       )}

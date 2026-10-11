@@ -26,8 +26,19 @@ import {
 
 export default function AdminOrdersPage() {
   const { showToast } = useToast();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [orders, setOrders] = useState<Order[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const item = localStorage.getItem('mt_orders_v2');
+        if (item) {
+          const parsed = JSON.parse(item);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState(orders.length === 0);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -37,8 +48,8 @@ export default function AdminOrdersPage() {
   const [internalNotes, setInternalNotes] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const loadOrders = async () => {
-    setIsLoading(true);
+  const loadOrders = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const data = await getOrders();
       setOrders(data);
@@ -50,7 +61,7 @@ export default function AdminOrdersPage() {
   };
 
   useEffect(() => {
-    loadOrders();
+    loadOrders(orders.length > 0);
   }, []);
 
   const openOrderModal = (order: Order) => {

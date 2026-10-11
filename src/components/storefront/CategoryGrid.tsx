@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Category } from '@/types';
@@ -10,7 +10,20 @@ interface CategoryGridProps {
   categories: Category[];
 }
 
-export default function CategoryGrid({ categories }: CategoryGridProps) {
+export default function CategoryGrid({ categories: initialCategories }: CategoryGridProps) {
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+
+  useEffect(() => {
+    setCategories(initialCategories);
+    const handleUpdate = (e: any) => {
+      if (e?.detail && Array.isArray(e.detail)) {
+        setCategories(e.detail);
+      }
+    };
+    window.addEventListener('mt_categories_updated', handleUpdate);
+    return () => window.removeEventListener('mt_categories_updated', handleUpdate);
+  }, [initialCategories]);
+
   // Show active categories ordered by display_order
   const displayCategories = categories
     .filter((c) => c.is_active)

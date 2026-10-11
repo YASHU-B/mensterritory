@@ -9,7 +9,7 @@ async function verifyAuth(req: NextRequest) {
 
 export async function GET() {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase is not configured on server' }, { status: 503 });
+    return NextResponse.json({ error: 'Database service is temporarily unavailable' }, { status: 503 });
   }
 
   const { data, error } = await supabaseAdmin
@@ -21,10 +21,19 @@ export async function GET() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
   }
 
-  return NextResponse.json({ orders: data });
+  return NextResponse.json(
+    { orders: data },
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    }
+  );
 }
 
 export async function PUT(req: NextRequest) {
@@ -34,7 +43,7 @@ export async function PUT(req: NextRequest) {
   }
 
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase is not configured on server' }, { status: 503 });
+    return NextResponse.json({ error: 'Database service is temporarily unavailable' }, { status: 503 });
   }
 
   let body: any;
@@ -49,21 +58,24 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
   }
 
-  const updateData: any = { updated_at: new Date().toISOString() };
-  if (order_status) updateData.order_status = order_status;
-  if (tracking_link !== undefined) updateData.tracking_link = tracking_link;
-  if (courier_name !== undefined) updateData.courier_name = courier_name;
-  if (tracking_number !== undefined) updateData.tracking_number = tracking_number;
+  const updates: any = { updated_at: new Date().toISOString() };
+  if (order_status) updates.order_status = order_status;
+  if (tracking_link !== undefined) updates.tracking_link = tracking_link;
+  if (courier_name !== undefined) updates.courier_name = courier_name;
+  if (tracking_number !== undefined) updates.tracking_number = tracking_number;
 
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .update(updateData)
+    .update(updates)
     .eq('id', id)
-    .select()
+    .select(`
+      *,
+      order_items (*)
+    `)
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
   }
 
   return NextResponse.json({ order: data });

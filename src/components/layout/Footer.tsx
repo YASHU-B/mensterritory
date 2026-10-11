@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useStore } from '@/context/StoreContext';
 import { MapPin, Phone, MessageCircle, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import InstagramIcon from '@/components/ui/InstagramIcon';
@@ -38,8 +39,13 @@ export default function Footer() {
           {/* Brand Col */}
           <div className="lg:col-span-2 space-y-4">
             <Link href="/" className="inline-flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-zinc-950 border border-zinc-900 flex items-center justify-center font-mono font-black text-white text-base transition-colors shadow-sm">
-                MT
+              <div className="relative w-11 h-11 rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 shadow-xs shrink-0">
+                <Image
+                  src="/images/favicon-512.png"
+                  alt="Men's Territory Logo"
+                  fill
+                  className="object-contain p-0.5"
+                />
               </div>
               <div className="flex flex-col">
                 <span className="text-lg font-black tracking-widest text-zinc-950 uppercase">
@@ -127,10 +133,20 @@ export default function Footer() {
             <div className="flex items-start gap-2.5 text-xs">
               <MapPin className="w-4 h-4 text-zinc-950 shrink-0 mt-0.5" />
               <div className="space-y-0.5 leading-relaxed text-zinc-600">
-                <p className="font-bold text-zinc-950">Men&apos;s Territory Store</p>
-                <p>{settings.address_line1 || 'VNR Peta (Taduku Peta)'}</p>
-                <p>{settings.address_line2 || 'Nagari (M)'}, {settings.district || 'Chittoor District'}</p>
+                <p className="font-bold text-zinc-950">Men&apos;s Territory Men&apos;s wear</p>
+                <p>{settings.address_line1 || '7HCJ+QC7, Thadukupeta'}</p>
+                <p>{settings.address_line2 || 'Nagari, Taduku'}, {settings.district || 'Chittoor District'}</p>
                 <p>{settings.state || 'Andhra Pradesh'}, India - {settings.pincode || '517590'}</p>
+                <div className="pt-1.5">
+                  <a
+                    href="https://www.google.com/maps/dir/?api=1&destination=Men%27s+Territory+Men%27s+wear,+7HCJ%2BQC7,+Thadukupeta,+Nagari,+Taduku,+Andhra+Pradesh+517590"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-bold text-zinc-950 hover:underline text-[11px]"
+                  >
+                    <span>Get Directions &rarr;</span>
+                  </a>
+                </div>
               </div>
             </div>
 

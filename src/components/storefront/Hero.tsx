@@ -7,8 +7,15 @@ import { useStore } from '@/context/StoreContext';
 import { ArrowRight, MessageSquareText, Shield, Sparkles, Truck } from 'lucide-react';
 import { generateWhatsAppUrl } from '@/services/orderService';
 
-export default function Hero() {
-  const { settings } = useStore();
+import { StoreSettings } from '@/types';
+
+interface HeroProps {
+  initialSettings?: StoreSettings;
+}
+
+export default function Hero({ initialSettings }: HeroProps = {}) {
+  const { settings: contextSettings } = useStore();
+  const settings = contextSettings || initialSettings;
 
   const heroImage = settings.hero_image_url || '';
 
@@ -20,17 +27,28 @@ export default function Hero() {
 
   return (
     <section className="relative min-h-[80vh] lg:min-h-[85vh] flex items-center justify-center overflow-hidden bg-white text-zinc-900 border-b border-zinc-200/80">
-      {/* Background Hero Layer if admin uploaded photo */}
+      {/* Background Hero Layer with official shop banners */}
       <div className="absolute inset-0 z-0">
-        {heroImage ? (
+        {/* Mobile vertical banner */}
+        <div className="sm:hidden absolute inset-0">
           <Image
-            src={heroImage}
+            src="/images/banners/banner-vertical.jpg"
+            alt="Men's Territory Mobile Banner"
+            fill
+            priority
+            className="object-cover object-center opacity-25 scale-105"
+          />
+        </div>
+        {/* Desktop horizontal banner */}
+        <div className="hidden sm:block absolute inset-0">
+          <Image
+            src={heroImage || '/images/banners/banner-horizontal.jpg'}
             alt={settings.hero_title || "Men's Territory Fashion Collection"}
             fill
             priority
             className="object-cover object-top opacity-20 scale-105 transition-transform duration-1000 ease-out"
           />
-        ) : null}
+        </div>
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-50/60 via-white to-white" />
         <div className="absolute inset-0 hero-aurora-glow pointer-events-none" />
       </div>
@@ -67,7 +85,7 @@ export default function Hero() {
             href={settings.hero_cta_link || '/shop'}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-black uppercase tracking-[0.18em] rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
           >
-            <span>{settings.hero_cta_text || 'EXPLORE COLLECTION'}</span>
+            <span>{settings.hero_cta_text || 'SHOP COLLECTION'}</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
 

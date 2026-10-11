@@ -14,7 +14,7 @@ async function verifyAuth(req: NextRequest) {
 
 export async function GET() {
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase is not configured on server' }, { status: 503 });
+    return NextResponse.json({ error: 'Database service is temporarily unavailable' }, { status: 503 });
   }
 
   const { data, error } = await supabaseAdmin
@@ -23,10 +23,19 @@ export async function GET() {
     .order('display_order', { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
   }
 
-  return NextResponse.json({ categories: data });
+  return NextResponse.json(
+    { categories: data },
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    }
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -36,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase is not configured on server' }, { status: 503 });
+    return NextResponse.json({ error: 'Database service is temporarily unavailable' }, { status: 503 });
   }
 
   let body: any;
@@ -61,15 +70,33 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('categories')
-    .upsert(payload)
+    .upsert(payload, { onConflict: 'id' })
     .select()
     .single();
 
   if (error) {
+    console.error('Supabase admin categories upsert error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ category: data });
+  // Purge storefront cache
+  try {
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/', 'layout');
+    revalidatePath('/');
+    revalidatePath('/shop');
+  } catch (err) {
+    console.warn('revalidatePath error:', err);
+  }
+
+  return NextResponse.json(
+    { category: data },
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
+    }
+  );
 }
 
 export async function DELETE(req: NextRequest) {
@@ -79,7 +106,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Supabase is not configured on server' }, { status: 503 });
+    return NextResponse.json({ error: 'Database service is temporarily unavailable' }, { status: 503 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -92,7 +119,7 @@ export async function DELETE(req: NextRequest) {
   const { error } = await supabaseAdmin.from('categories').delete().eq('id', id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true, id });

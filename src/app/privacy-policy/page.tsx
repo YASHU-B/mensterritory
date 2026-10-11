@@ -53,9 +53,9 @@ export default function PrivacyPolicyPage() {
         <p>
           If you have questions regarding our privacy practices, contact us at:
           <br />
-          <strong>Men&apos;s Territory</strong>
+          <strong>Men&apos;s Territory Men&apos;s wear</strong>
           <br />
-          VNR Peta (Taduku Peta), Nagari (M), Chittoor District, Andhra Pradesh - 517590
+          7HCJ+QC7, Thadukupeta, Nagari, Taduku, Andhra Pradesh - 517590
           <br />
           WhatsApp: +91 7815858973 | Email: contact@mensterritory.com
         </p>

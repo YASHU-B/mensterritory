@@ -22,19 +22,20 @@ export default function ProductGrid({
 }: ProductGridProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="bg-white border border-zinc-200 rounded-2xl overflow-hidden p-4 space-y-4 animate-pulse shadow-xs"
+            className="bg-white border border-zinc-200/90 rounded-2xl overflow-hidden p-3 sm:p-4 space-y-3.5 shadow-xs"
           >
-            <div className="aspect-[3/4] w-full bg-zinc-100 rounded-xl" />
+            {/* Animatic Shimmer Card Thumbnail */}
+            <div className="aspect-[3/4] w-full rounded-xl animatic-shimmer" />
             <div className="space-y-2">
-              <div className="h-3 bg-zinc-100 rounded w-1/3" />
-              <div className="h-4 bg-zinc-200 rounded w-4/5" />
-              <div className="h-4 bg-zinc-100 rounded w-1/4" />
+              <div className="h-3 rounded animatic-shimmer w-1/3" />
+              <div className="h-4 rounded-md animatic-shimmer w-4/5" />
+              <div className="h-4 rounded animatic-shimmer w-1/4" />
             </div>
-            <div className="h-8 bg-zinc-100 rounded-xl w-full" />
+            <div className="h-9 rounded-xl animatic-shimmer w-full" />
           </div>
         ))}
       </div>

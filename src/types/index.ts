@@ -119,6 +119,9 @@ export interface Order {
   payment_status: PaymentStatus;
   order_source: OrderSource;
   internal_notes?: string;
+  tracking_number?: string;
+  courier_name?: string;
+  tracking_link?: string;
   created_at: string;
   updated_at: string;
   items?: OrderItem[];

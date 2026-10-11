@@ -6,25 +6,29 @@ import ProductGrid from '@/components/storefront/ProductGrid';
 import PromotionalBanner from '@/components/storefront/PromotionalBanner';
 import InstagramSection from '@/components/storefront/InstagramSection';
 import StoreLocationSection from '@/components/storefront/StoreLocationSection';
-import { getCategories, getProducts } from '@/lib/supabase/data-service';
+import { getCategories, getProducts, getBanners, getStoreSettings } from '@/lib/supabase/data-service';
 import { ArrowRight, Sparkles, TrendingUp, Award } from 'lucide-react';
 
-export const revalidate = 60; // ISR cache revalidation
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function HomePage() {
-  const [categories, newArrivals, bestSellers, trending] = await Promise.all([
+  const [categories, banners, storeSettings, newArrivals, bestSellers, trending] = await Promise.all([
     getCategories(),
+    getBanners(),
+    getStoreSettings(),
     getProducts({ onlyNewArrival: true, limit: 4 }),
     getProducts({ onlyBestSeller: true, limit: 4 }),
     getProducts({ onlyTrending: true, limit: 4 }),
   ]);
 
+  const activeBanner = banners.find((b) => b.is_active) || null;
   const hasAnyProducts = newArrivals.length > 0 || bestSellers.length > 0 || trending.length > 0;
 
   return (
     <div className="space-y-12 sm:space-y-16">
       {/* 1. Hero Section */}
-      <Hero />
+      <Hero initialSettings={storeSettings} />
 
       {/* 2. Featured Categories */}
       <CategoryGrid categories={categories} />
@@ -34,17 +38,17 @@ export default async function HomePage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
             <div>
-              <div className="flex items-center gap-2 text-[#d4af37] text-xs uppercase font-bold tracking-widest mb-1">
-                <Sparkles className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 text-zinc-600 text-xs uppercase font-bold tracking-widest mb-1">
+                <Sparkles className="w-3.5 h-3.5 text-zinc-950" />
                 <span>Just Dropped</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight font-heading">
+              <h2 className="text-2xl sm:text-3xl font-black uppercase text-zinc-950 tracking-tight font-heading">
                 New Arrivals
               </h2>
             </div>
             <Link
               href="/shop?filter=new-arrival"
-              className="mt-3 sm:mt-0 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-amber-300 transition-colors"
+              className="mt-3 sm:mt-0 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-950 transition-colors"
             >
               <span>See All New Drops</span>
               <ArrowRight className="w-4 h-4" />
@@ -55,24 +59,24 @@ export default async function HomePage() {
       )}
 
       {/* 4. Promotional Banner */}
-      <PromotionalBanner />
+      <PromotionalBanner initialBanner={activeBanner} />
 
       {/* 5. Best Sellers (Rendered when products exist) */}
       {bestSellers.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
             <div>
-              <div className="flex items-center gap-2 text-[#d4af37] text-xs uppercase font-bold tracking-widest mb-1">
-                <Award className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 text-zinc-600 text-xs uppercase font-bold tracking-widest mb-1">
+                <Award className="w-3.5 h-3.5 text-zinc-950" />
                 <span>Customer Favorites</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight font-heading">
+              <h2 className="text-2xl sm:text-3xl font-black uppercase text-zinc-950 tracking-tight font-heading">
                 Best Sellers
               </h2>
             </div>
             <Link
               href="/shop?filter=best-seller"
-              className="mt-3 sm:mt-0 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-amber-300 transition-colors"
+              className="mt-3 sm:mt-0 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-950 transition-colors"
             >
               <span>View All Best Sellers</span>
               <ArrowRight className="w-4 h-4" />
@@ -87,17 +91,17 @@ export default async function HomePage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8">
             <div>
-              <div className="flex items-center gap-2 text-[#d4af37] text-xs uppercase font-bold tracking-widest mb-1">
-                <TrendingUp className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 text-zinc-600 text-xs uppercase font-bold tracking-widest mb-1">
+                <TrendingUp className="w-3.5 h-3.5 text-zinc-950" />
                 <span>Streetwear Edit</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black uppercase text-white tracking-tight font-heading">
+              <h2 className="text-2xl sm:text-3xl font-black uppercase text-zinc-950 tracking-tight font-heading">
                 Trending In The Territory
               </h2>
             </div>
             <Link
               href="/shop?filter=trending"
-              className="mt-3 sm:mt-0 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-amber-300 transition-colors"
+              className="mt-3 sm:mt-0 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-950 transition-colors"
             >
               <span>Explore Trending</span>
               <ArrowRight className="w-4 h-4" />

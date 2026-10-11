@@ -7,16 +7,35 @@ import { ArrowRight, Flame } from 'lucide-react';
 import { getBanners } from '@/lib/supabase/data-service';
 import { Banner } from '@/types';
 
-export default function PromotionalBanner() {
-  const [banner, setBanner] = useState<Banner | null>(null);
+interface PromotionalBannerProps {
+  initialBanner?: Banner | null;
+}
+
+export default function PromotionalBanner({ initialBanner }: PromotionalBannerProps = {}) {
+  const [banner, setBanner] = useState<Banner | null>(() => {
+    if (initialBanner !== undefined) return initialBanner;
+    if (typeof window !== 'undefined') {
+      try {
+        const item = localStorage.getItem('mt_banners_v2');
+        if (item) {
+          const list = JSON.parse(item);
+          if (Array.isArray(list)) {
+            return list.find((b: Banner) => b.is_active) || null;
+          }
+        }
+      } catch {}
+    }
+    return null;
+  });
 
   useEffect(() => {
     async function loadBanner() {
       const banners = await getBanners();
-      const active = banners.find((b) => b.is_active);
-      if (active) {
-        setBanner(active);
-      }
+      const active = banners.find((b) => b.is_active) || null;
+      setBanner((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(active)) return prev;
+        return active;
+      });
     }
     loadBanner();
   }, []);

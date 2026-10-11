@@ -20,36 +20,42 @@ import {
 
 export default function AdminProductsPage() {
   const { showToast } = useToast();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  // Instant local cache initialization
+  const [products, setProducts] = useState<Product[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const item = localStorage.getItem('mt_products_v2');
+        if (item) {
+          const parsed = JSON.parse(item);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
+
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const item = localStorage.getItem('mt_categories_v2');
+        if (item) {
+          const parsed = JSON.parse(item);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
+
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(products.length === 0);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
-      // Auto-sync any local browser products to Supabase cloud
-      if (typeof window !== 'undefined') {
-        const rawLocal = localStorage.getItem('mt_products_v2');
-        if (rawLocal) {
-          try {
-            const parsed = JSON.parse(rawLocal);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              for (const p of parsed) {
-                await fetch('/api/admin/products', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(p),
-                }).catch(() => null);
-              }
-            }
-          } catch {}
-        }
-      }
-
       const [prods, cats] = await Promise.all([
         getAllProductsAdmin(),
         getCategories(),
@@ -64,7 +70,8 @@ export default function AdminProductsPage() {
   };
 
   useEffect(() => {
-    loadData();
+    // If cached products already exist, fetch fresh data silently in the background
+    loadData(products.length > 0);
   }, []);
 
   const handleToggleActive = async (product: Product) => {
@@ -193,7 +200,27 @@ export default function AdminProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 font-mono text-zinc-700">
-              {filteredProducts.length === 0 ? (
+              {isLoading && products.length === 0 ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-14 rounded-lg bg-zinc-200 shrink-0" />
+                        <div className="space-y-2 flex-1">
+                          <div className="h-3.5 bg-zinc-200 rounded w-36" />
+                          <div className="h-2.5 bg-zinc-100 rounded w-20" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4"><div className="h-3.5 bg-zinc-200 rounded w-24" /></td>
+                    <td className="p-4"><div className="h-3.5 bg-zinc-200 rounded w-16" /></td>
+                    <td className="p-4"><div className="h-3.5 bg-zinc-200 rounded w-16" /></td>
+                    <td className="p-4"><div className="h-5 bg-zinc-100 rounded w-20" /></td>
+                    <td className="p-4 text-center"><div className="w-5 h-5 mx-auto bg-zinc-200 rounded-full" /></td>
+                    <td className="p-4 text-right"><div className="h-8 w-16 ml-auto bg-zinc-100 rounded-lg" /></td>
+                  </tr>
+                ))
+              ) : filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-zinc-400 font-sans">
                     No products found matching filters.

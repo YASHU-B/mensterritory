@@ -19,15 +19,17 @@ function ShopContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
+  const isNewArrival = filterParam === 'new-arrival' || filterParam === 'new-arrivals';
   const initialFilters: FilterState = {
     categorySlug: categoryParam,
-    minPrice: 500,
-    maxPrice: 3500,
+    minPrice: 0,
+    maxPrice: 5000,
     size: '',
     color: '',
     fit: '',
     sortBy: 'newest',
     onlyFeatured: false,
+    onlyNewArrival: isNewArrival,
     onlyBestSeller: filterParam === 'best-seller',
     onlyTrending: filterParam === 'trending',
     onlyOffer: filterParam === 'offer',
@@ -37,9 +39,11 @@ function ShopContent() {
 
   // Sync url param changes
   useEffect(() => {
+    const isNew = filterParam === 'new-arrival' || filterParam === 'new-arrivals';
     setFilters((prev) => ({
       ...prev,
       categorySlug: categoryParam,
+      onlyNewArrival: isNew,
       onlyBestSeller: filterParam === 'best-seller',
       onlyTrending: filterParam === 'trending',
       onlyOffer: filterParam === 'offer',
@@ -56,13 +60,14 @@ function ShopContent() {
           getProducts({
             categorySlug: filters.categorySlug || undefined,
             search: searchParam || undefined,
-            minPrice: filters.minPrice,
-            maxPrice: filters.maxPrice,
+            minPrice: filters.minPrice > 0 ? filters.minPrice : undefined,
+            maxPrice: filters.maxPrice < 5000 ? filters.maxPrice : undefined,
             size: filters.size || undefined,
             color: filters.color || undefined,
             fit: filters.fit || undefined,
             sortBy: filters.sortBy,
             onlyFeatured: filters.onlyFeatured || undefined,
+            onlyNewArrival: filters.onlyNewArrival || undefined,
             onlyBestSeller: filters.onlyBestSeller || undefined,
             onlyTrending: filters.onlyTrending || undefined,
             onlyOffer: filters.onlyOffer || undefined,
@@ -82,13 +87,14 @@ function ShopContent() {
   const handleResetFilters = () => {
     setFilters({
       categorySlug: '',
-      minPrice: 500,
-      maxPrice: 3500,
+      minPrice: 0,
+      maxPrice: 5000,
       size: '',
       color: '',
       fit: '',
       sortBy: 'newest',
       onlyFeatured: false,
+      onlyNewArrival: false,
       onlyBestSeller: false,
       onlyTrending: false,
       onlyOffer: false,
@@ -109,11 +115,23 @@ function ShopContent() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-1.5 relative z-10">
           <div>
             <h1 className="text-3xl sm:text-5xl font-black uppercase text-zinc-950 tracking-tight font-heading">
-              {activeCategory ? activeCategory.name : searchParam ? `Search: "${searchParam}"` : 'All Collections'}
+              {activeCategory
+                ? activeCategory.name
+                : filterParam === 'offer' || filters.onlyOffer
+                ? 'Special Offers & Sale'
+                : filterParam === 'trending'
+                ? 'Trending Streetwear'
+                : filterParam === 'best-seller'
+                ? 'Best Selling Pieces'
+                : searchParam
+                ? `Search: "${searchParam}"`
+                : 'All Collections'}
             </h1>
             <p className="text-xs sm:text-sm text-zinc-600 font-normal mt-1.5 max-w-xl leading-relaxed">
               {activeCategory?.description ||
-                "Explore curated oversized wear, high-street baggy pants, crisp executive formals, and premium cotton essentials."}
+                (filterParam === 'offer' || filters.onlyOffer
+                  ? 'Exclusive seasonal offers, special promotional deals, and maximum discount menswear.'
+                  : 'Explore curated oversized wear, high-street baggy pants, crisp executive formals, and premium cotton essentials.')}
             </p>
           </div>
 

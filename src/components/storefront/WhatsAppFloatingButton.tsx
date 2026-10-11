@@ -12,7 +12,7 @@ export default function WhatsAppFloatingButton() {
   const whatsappUrl = generateWhatsAppUrl(phone, defaultMessage);
 
   return (
-    <aside aria-label="WhatsApp Quick Contact" className="fixed bottom-6 left-6 z-40 group">
+    <aside aria-label="WhatsApp Quick Contact" className="fixed bottom-20 sm:bottom-6 left-4 sm:left-6 z-30 group">
       <a
         href={whatsappUrl}
         target="_blank"

@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { useStore } from '@/context/StoreContext';
 import { useToast } from '@/components/ui/Toast';
-import { MapPin, Phone, MessageSquareText, Mail, Send, CheckCircle2 } from 'lucide-react';
+import { MapPin, Phone, MessageSquareText, Mail, Send, CheckCircle2, Navigation } from 'lucide-react';
 import InstagramIcon from '@/components/ui/InstagramIcon';
 import { generateWhatsAppUrl } from '@/services/orderService';
+import { STORE_DIRECTIONS_URL } from '@/lib/constants';
 
 export default function ContactPage() {
   const { settings } = useStore();
@@ -67,11 +68,22 @@ export default function ContactPage() {
                 <span className="text-[11px] text-zinc-500">Physical Flagship Showroom</span>
               </div>
             </div>
-            <p className="text-xs text-zinc-700 leading-relaxed pl-13">
-              {settings.address_line1 || 'VNR Peta (Taduku Peta)'},<br />
-              {settings.address_line2 || 'Nagari (M)'}, {settings.district || 'Chittoor District'},<br />
-              {settings.state || 'Andhra Pradesh'}, India - {settings.pincode || '517590'}
-            </p>
+            <div className="pl-13 space-y-2">
+              <p className="text-xs text-zinc-700 leading-relaxed">
+                <span className="font-bold text-zinc-950">Men&apos;s Territory Men&apos;s wear</span><br />
+                7HCJ+QC7, Thadukupeta, Nagari, Taduku,<br />
+                Chittoor District, Andhra Pradesh - 517590
+              </p>
+              <a
+                href={STORE_DIRECTIONS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-950 hover:bg-zinc-800 text-white rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors"
+              >
+                <Navigation className="w-3 h-3 text-white" />
+                <span>Get Directions &rarr;</span>
+              </a>
+            </div>
           </div>
 
           {/* Direct WhatsApp Card */}

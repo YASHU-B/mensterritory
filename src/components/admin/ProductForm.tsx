@@ -186,9 +186,9 @@ export default function ProductForm({ initialProduct, isEditing = false }: Produ
       await saveProduct(productPayload);
       showToast(isEditing ? 'Product updated successfully' : 'Product created successfully', 'success');
       router.push('/admin/products');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save product:', err);
-      showToast('Error saving product', 'error');
+      showToast(err?.message || 'Error saving product', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -549,7 +549,7 @@ export default function ProductForm({ initialProduct, isEditing = false }: Produ
                     try {
                       const url = await uploadImage(file, 'product-images');
                       setThumbnail(url);
-                      showToast('Photo uploaded successfully to Supabase Storage!', 'success');
+                      showToast('Photo uploaded successfully!', 'success');
                     } catch (err) {
                       console.error(err);
                       showToast('Upload failed. Please try again.', 'error');
@@ -562,7 +562,7 @@ export default function ProductForm({ initialProduct, isEditing = false }: Produ
                 {isUploadingThumbnail ? (
                   <div className="flex flex-col items-center gap-2 py-4">
                     <Loader2 className="w-8 h-8 text-zinc-950 animate-spin" />
-                    <span className="text-xs font-semibold text-zinc-700">Uploading to Storage...</span>
+                    <span className="text-xs font-semibold text-zinc-700">Uploading photo...</span>
                   </div>
                 ) : (
                   <>
@@ -573,7 +573,7 @@ export default function ProductForm({ initialProduct, isEditing = false }: Produ
                       Click to Upload Photo
                     </span>
                     <span className="text-[11px] text-zinc-500 mt-1">
-                      Direct upload from device to Supabase
+                      Direct cloud upload from device
                     </span>
                   </>
                 )}
@@ -642,7 +642,7 @@ export default function ProductForm({ initialProduct, isEditing = false }: Produ
                       Click to Upload Secondary Angle
                     </span>
                     <span className="text-[11px] text-zinc-500 mt-1">
-                      Direct upload to Supabase Storage
+                      Direct cloud upload
                     </span>
                   </>
                 )}

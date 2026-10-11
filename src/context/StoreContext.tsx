@@ -13,14 +13,32 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<StoreSettings>(INITIAL_STORE_SETTINGS);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+export function StoreProvider({
+  children,
+  initialSettings,
+}: {
+  children: React.ReactNode;
+  initialSettings?: StoreSettings;
+}) {
+  const [settings, setSettings] = useState<StoreSettings>(() => {
+    if (initialSettings) return initialSettings;
+    if (typeof window !== 'undefined') {
+      try {
+        const item = localStorage.getItem('mt_store_settings_v2');
+        if (item) return JSON.parse(item);
+      } catch {}
+    }
+    return INITIAL_STORE_SETTINGS;
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(!initialSettings);
 
   const refreshSettings = useCallback(async () => {
     try {
       const data = await getStoreSettings();
-      setSettings(data);
+      setSettings((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(data)) return prev;
+        return data;
+      });
     } catch (e) {
       console.error('Failed to load store settings:', e);
     } finally {

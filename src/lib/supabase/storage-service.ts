@@ -1,8 +1,8 @@
 import { supabase, isSupabaseConfigured } from './client';
 
 /**
- * Uploads a file directly to Supabase Storage bucket.
- * Falls back to Base64 Data URL if Supabase is not configured yet.
+ * Uploads a file securely to cloud storage.
+ * Uses server-side upload route first to prevent CORS, RLS failures, and avoid exposing database details.
  * 
  * @param file - The file to upload (Image file from <input type="file" />)
  * @param bucket - The storage bucket name ('product-images', 'banners', 'categories')
@@ -16,7 +16,30 @@ export async function uploadImage(
     throw new Error('No file provided for upload');
   }
 
-  // Sanitize filename and create unique path: [timestamp]-[clean-name]
+  // 1. Try server-side upload API route (secure service_role, no client RLS or CORS issues)
+  if (typeof window !== 'undefined') {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bucket', bucket);
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.url) {
+          return json.url;
+        }
+      }
+    } catch {
+      // Fall through to direct or compressed fallback
+    }
+  }
+
+  // 2. Direct client upload fallback
   const cleanName = file.name
     .toLowerCase()
     .replace(/[^a-z0-9.]/g, '-')
@@ -33,11 +56,7 @@ export async function uploadImage(
           contentType: file.type,
         });
 
-      if (error) {
-        console.warn(`Supabase Storage upload to "${bucket}" failed:`, error.message);
-        // Fall through to Base64 fallback below
-      } else if (data) {
-        // Retrieve public URL from bucket
+      if (!error && data) {
         const { data: publicUrlData } = supabase.storage
           .from(bucket)
           .getPublicUrl(data.path);
@@ -46,12 +65,12 @@ export async function uploadImage(
           return publicUrlData.publicUrl;
         }
       }
-    } catch (err) {
-      console.warn('Storage upload exception, using fallback:', err);
+    } catch {
+      // Fall through
     }
   }
 
-  // Fallback: Compress and convert file to web-friendly Base64 Data URL
+  // 3. Client-side compression fallback
   return compressImageToDataUrl(file);
 }
 

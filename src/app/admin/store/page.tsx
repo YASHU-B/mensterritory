@@ -56,12 +56,12 @@ export default function AdminStorePage() {
 
           <div className="pt-4 border-t border-zinc-100">
             <a
-              href="https://maps.google.com/?q=Nagari+Chittoor+Andhra+Pradesh+517590"
+              href="https://www.google.com/maps/dir/?api=1&destination=Men%27s+Territory+Men%27s+wear,+7HCJ%2BQC7,+Thadukupeta,+Nagari,+Taduku,+Andhra+Pradesh+517590"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-xs text-zinc-900 hover:underline font-semibold"
             >
-              <span>View On Google Maps</span>
+              <span>Get Directions on Google Maps</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>

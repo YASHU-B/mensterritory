@@ -9,8 +9,8 @@ export const INITIAL_STORE_SETTINGS: StoreSettings = {
   phone_primary: '7815858973',
   phone_secondary: '8897899946',
   instagram_handle: '@mens_territory_mt',
-  address_line1: 'VNR Peta (Taduku Peta)',
-  address_line2: 'Nagari (M)',
+  address_line1: '7HCJ+QC7, Thadukupeta',
+  address_line2: 'Nagari, Taduku',
   city: 'Nagari',
   district: 'Chittoor District',
   state: 'Andhra Pradesh',
@@ -22,7 +22,7 @@ export const INITIAL_STORE_SETTINGS: StoreSettings = {
   is_announcement_active: true,
   hero_title: "MEN'S TERRITORY",
   hero_subtitle: "The Real Man's Choice — Modern, Confident, Versatile Styles Crafted for the Urban Gentleman.",
-  hero_cta_text: "EXPLORE COLLECTION",
+  hero_cta_text: "SHOP COLLECTION",
   hero_cta_link: "/shop",
   hero_image_url: "",
 };
@@ -168,8 +168,21 @@ export const INITIAL_CATEGORIES: Category[] = [
 // Clean empty product catalog - Admin adds all products
 export const INITIAL_PRODUCTS: Product[] = [];
 
-// Clean empty banners - Admin adds all banners
-export const INITIAL_BANNERS: Banner[] = [];
+// Default promo banner matching storefront defaults
+export const INITIAL_BANNERS: Banner[] = [
+  {
+    id: 'c0000000-0000-0000-0000-000000000001',
+    title: 'Up to 50% Off On Street & Baggy Edits',
+    subtitle:
+      'Architectural oversized drop-shoulder t-shirts, heavy duck canvas overshirts, and wide-leg baggy trousers tailored for true masculine presence.',
+    cta_text: 'EXPLORE OFFERS',
+    cta_link: '/shop?filter=offer',
+    image_url: '',
+    display_order: 1,
+    is_active: true,
+    type: 'promo',
+  },
+];
 
 // Clean empty orders
 export const INITIAL_ORDERS: Order[] = [];

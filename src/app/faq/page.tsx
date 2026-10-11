@@ -34,7 +34,7 @@ export default function FAQPage() {
     },
     {
       q: 'Can I visit your physical showroom?',
-      a: 'Yes, absolutely! Our flagship showroom is located at VNR Peta (Taduku Peta), Nagari (M), Chittoor District, Andhra Pradesh - PIN 517590. You can try our full collection of baggy trousers, tailored shirts, and streetwear in person.',
+      a: 'Yes, absolutely! Our flagship showroom is Men\'s Territory Men\'s wear, located at 7HCJ+QC7, Thadukupeta, Nagari, Taduku, Andhra Pradesh - PIN 517590. You can try our full collection of baggy trousers, tailored shirts, and streetwear in person.',
     },
     {
       q: 'What fabrics do you use for oversized and baggy wear?',

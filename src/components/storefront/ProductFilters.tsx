@@ -13,6 +13,7 @@ export interface FilterState {
   fit: string;
   sortBy: 'newest' | 'price-asc' | 'price-desc' | 'popular' | 'discount' | 'name-asc';
   onlyFeatured: boolean;
+  onlyNewArrival: boolean;
   onlyBestSeller: boolean;
   onlyTrending: boolean;
   onlyOffer: boolean;
@@ -98,9 +99,9 @@ export default function ProductFilters({
           </div>
           <input
             type="range"
-            min="500"
-            max="4000"
-            step="100"
+            min="0"
+            max="5000"
+            step="50"
             value={filters.maxPrice}
             onChange={(e) => onFilterChange({ ...filters, maxPrice: Number(e.target.value) })}
             className="w-full accent-zinc-950 bg-zinc-200 rounded-lg cursor-pointer h-1.5"
@@ -204,6 +205,15 @@ export default function ProductFilters({
         <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-950 mb-2">
           Collections
         </h4>
+        <label className="flex items-center gap-2 text-xs text-zinc-700 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={filters.onlyNewArrival}
+            onChange={(e) => onFilterChange({ ...filters, onlyNewArrival: e.target.checked })}
+            className="rounded border-zinc-300 bg-white text-zinc-950 focus:ring-0"
+          />
+          <span>New Arrivals Only</span>
+        </label>
         <label className="flex items-center gap-2 text-xs text-zinc-700 cursor-pointer select-none">
           <input
             type="checkbox"

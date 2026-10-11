@@ -2,15 +2,20 @@
 
 import React from 'react';
 import { useStore } from '@/context/StoreContext';
-import { MapPin, Phone, MessageSquareText, Navigation, Clock, ShieldCheck } from 'lucide-react';
+import { MapPin, Phone, MessageSquareText, Navigation, Clock, ShieldCheck, ExternalLink } from 'lucide-react';
 import { generateWhatsAppUrl } from '@/services/orderService';
+import {
+  STORE_DIRECTIONS_URL,
+  STORE_MAP_EMBED_URL,
+  STORE_PLUS_CODE,
+} from '@/lib/constants';
 
 export default function StoreLocationSection() {
   const { settings } = useStore();
   const phone = settings.whatsapp_number || '7815858973';
   const whatsappUrl = generateWhatsAppUrl(
     phone,
-    "Hello Men's Territory, I would like to visit your store in Nagari. Please share location directions."
+    "Hello Men's Territory, I would like to visit your store at Thadukupeta, Nagari. Please share location directions."
   );
 
   return (
@@ -41,9 +46,10 @@ export default function StoreLocationSection() {
                   <h4 className="text-xs font-bold uppercase tracking-[0.15em] text-zinc-950">
                     Store Address
                   </h4>
-                  <p className="text-xs text-zinc-700 mt-1 leading-relaxed">
-                    {settings.address_line1 || 'VNR Peta (Taduku Peta)'}, {settings.address_line2 || 'Nagari (M)'},<br />
-                    {settings.district || 'Chittoor District'}, {settings.state || 'Andhra Pradesh'}, India - {settings.pincode || '517590'}
+                  <p className="text-xs text-zinc-800 mt-1 leading-relaxed">
+                    <span className="font-bold text-zinc-950">Men&apos;s Territory Men&apos;s wear</span><br />
+                    7HCJ+QC7, Thadukupeta, Nagari, Taduku,<br />
+                    Chittoor District, Andhra Pradesh - 517590
                   </p>
                 </div>
               </div>
@@ -100,7 +106,7 @@ export default function StoreLocationSection() {
               </a>
 
               <a
-                href="https://maps.google.com/?q=Nagari+Chittoor+Andhra+Pradesh+517590"
+                href={STORE_DIRECTIONS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-7 py-3.5 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold uppercase tracking-[0.15em] transition-all hover:scale-105 active:scale-95 shadow-md"
@@ -111,31 +117,50 @@ export default function StoreLocationSection() {
             </div>
           </div>
 
-          {/* Map & Visual Showcase Box */}
-          <div className="relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-50 p-8 flex flex-col justify-between min-h-[340px] shadow-xs">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono tracking-[0.2em] text-zinc-600 uppercase font-bold">
-                  MT FLAGSHIP • VNR PETA
-                </span>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Open Today
-                </span>
-              </div>
-              <h3 className="text-2xl font-black uppercase text-zinc-950 tracking-tight font-heading">
-                Authentic High-Fashion & Streetwear Hub
-              </h3>
-              <p className="text-xs text-zinc-600 leading-relaxed font-normal">
-                Featuring dedicated fitting suites, personalized sizing consultations, and instant in-store pickup for online WhatsApp reservations in Nagari and Chittoor District.
-              </p>
+          {/* Interactive Map Showcase Box */}
+          <div className="relative rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-50 p-6 sm:p-8 flex flex-col justify-between shadow-xs space-y-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono tracking-[0.2em] text-zinc-600 uppercase font-bold">
+                PLUS CODE: {STORE_PLUS_CODE} • NAGARI
+              </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Open Today
+              </span>
             </div>
 
-            <div className="pt-8 border-t border-zinc-200 flex items-center justify-between text-xs text-zinc-600">
+            {/* Live Google Maps Embedded View */}
+            <div className="relative w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-zinc-200 shadow-inner bg-zinc-200">
+              <iframe
+                title="Men's Territory Men's wear Map Location"
+                src={STORE_MAP_EMBED_URL}
+                className="w-full h-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <a
+                href={STORE_DIRECTIONS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-2.5 right-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/95 hover:bg-white text-zinc-950 rounded-lg text-[11px] font-bold shadow-md backdrop-blur-xs border border-zinc-200 transition-transform hover:scale-105"
+              >
+                <span>Navigate</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            <div className="pt-2 border-t border-zinc-200 flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-600">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span className="font-semibold text-zinc-800">Trial & Exchanges Welcome</span>
+                <span className="font-semibold text-zinc-800">Trial & Fitting Suites Open</span>
               </div>
-              <span className="font-mono text-zinc-500 tracking-wider">PIN: 517590</span>
+              <a
+                href={STORE_DIRECTIONS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-bold text-zinc-950 hover:underline"
+              >
+                <span>Direct Navigation &rarr;</span>
+              </a>
             </div>
           </div>
         </div>

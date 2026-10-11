@@ -92,9 +92,23 @@ export default function SearchBarModal({ isOpen, onClose }: SearchBarModalProps)
         {/* Content Body */}
         <div className="max-h-[65vh] overflow-y-auto p-4">
           {isLoading ? (
-            <div className="py-12 text-center text-zinc-500 text-sm">
-              <div className="w-6 h-6 border-2 border-zinc-300 border-t-zinc-950 rounded-full animate-spin mx-auto mb-3" />
-              Searching styles...
+            <div className="py-6 space-y-4">
+              <div className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-800">
+                <div className="w-4 h-4 rounded-full border-2 border-zinc-300 border-t-zinc-950 animate-spin" />
+                <span>Searching Collections...</span>
+              </div>
+              <div className="space-y-2.5">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex gap-4 p-2.5 rounded-xl border border-zinc-100 bg-zinc-50/50">
+                    <div className="w-14 h-16 rounded-lg animatic-shimmer shrink-0" />
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="h-4 w-3/4 rounded animatic-shimmer" />
+                      <div className="h-3 w-1/3 rounded animatic-shimmer" />
+                      <div className="h-4 w-1/4 rounded animatic-shimmer" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : results.length > 0 ? (
             <div className="space-y-2">

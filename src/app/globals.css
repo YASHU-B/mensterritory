@@ -1,5 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-plus-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-outfit), sans-serif;
+}
 
 @layer base {
   :root {
@@ -22,18 +26,19 @@
   html {
     scroll-behavior: smooth;
     color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: 'Plus Jakarta Sans', var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-sans);
     overflow-x: hidden;
     letter-spacing: -0.01em;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Outfit', sans-serif;
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: var(--font-heading);
     letter-spacing: -0.02em;
     color: #09090b;
   }
@@ -55,31 +60,13 @@
   }
 }
 
-/* Crisp Clean Glass Utilities */
-.glass-panel {
-  background: #ffffff;
-  border: 1px solid #e4e4e7;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-}
-
-.glass-nav {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid #e4e4e7;
-}
-
-/* Clean Airy Ambient Radial */
+/* Aurora & Background Accents */
 .hero-aurora-glow {
   background: radial-gradient(circle 800px at 50% -100px, rgba(0, 0, 0, 0.03), transparent 70%),
               radial-gradient(circle 600px at 80% 20%, rgba(0, 0, 0, 0.02), transparent 60%);
 }
 
-.luxury-ambient-radial {
-  background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 0, 0, 0.03), transparent 70%);
-}
-
-/* Clean Card Styling */
+/* Card Styling with Smooth Hover */
 .luxury-card {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid #e4e4e7;
@@ -95,43 +82,91 @@
   box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.08);
 }
 
-/* High Fashion Jet Black Primary Button */
-.gold-btn {
-  background: #09090b;
-  color: #ffffff;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.12);
+/* Utility to hide scrollbars cleanly */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-.gold-btn:hover {
-  background: #27272a;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.18);
+/* ========================================================================= */
+/* ENHANCED ANIMATIC LOADING EFFECTS                                         */
+/* ========================================================================= */
+@keyframes animatic-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
-/* Monochromatic Text Gradient */
-.gold-gradient-text {
-  background: linear-gradient(135deg, #09090b 0%, #3f3f46 60%, #71717a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
+.animatic-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: #f4f4f5;
 }
 
-.silver-gradient-text {
-  background: linear-gradient(135deg, #09090b 0%, #18181b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: inline-block;
+.animatic-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: animatic-shimmer 1.8s infinite ease-in-out;
+  pointer-events: none;
 }
 
-/* Crisp Clean Tag Pill */
-.clean-tag {
-  background: #f4f4f5;
-  color: #18181b;
-  border: 1px solid #e4e4e7;
+@keyframes animatic-pulse-scale {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
 }
+
+.animatic-pulse-scale {
+  animation: animatic-pulse-scale 2.2s infinite ease-in-out;
+}
+
+@keyframes orbit-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animatic-spin-slow {
+  animation: orbit-spin 3s linear infinite;
+}
+
+@keyframes animatic-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animatic-float {
+  animation: animatic-float 2.5s ease-in-out infinite;
+}
+
 
 /* Global Print Styles - Ensures clean 1-page printing */
 @media print {
@@ -140,7 +175,8 @@
   nav,
   .no-print,
   #whatsapp-floating-btn,
-  .announcement-bar {
+  .announcement-bar,
+  .mobile-bottom-nav {
     display: none !important;
   }
 
